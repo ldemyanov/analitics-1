@@ -1,0 +1,247 @@
+<!doctype html>
+<!-- Шаблон страницы согласования: описывает этапы и вопросы для заказчика.
+     Скрипт сборки добавляет таблицу ссылок на образцы документов и сохраняет готовую страницу. -->
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Экспедирование груза — согласование процесса</title>
+  <style>
+    :root{color-scheme:light;--ink:#183038;--muted:#50666c;--line:#d5e1df;--accent:#006c67;--paper:#fff;--bg:#f1f5f3}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 system-ui,-apple-system,sans-serif}
+    main{max-width:1120px;margin:auto;padding:48px 28px 64px}header{padding:42px;background:var(--ink);color:white;border-radius:20px}
+    .eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:12px;font-weight:750;color:#a8dfd3}h1{font-size:clamp(30px,5vw,48px);line-height:1.15;max-width:800px;margin:18px 0}header p{max-width:800px;color:#d4e5e5}
+    nav{display:flex;gap:20px;flex-wrap:wrap;margin:24px 0}a{color:var(--accent);text-underline-offset:4px}a:focus-visible{outline:3px solid #da962a;outline-offset:4px}section{margin-top:36px}h2{font-size:26px;line-height:1.3}h3{font-size:19px;margin:0 0 10px}p{margin:10px 0}.muted{color:var(--muted)}
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card{padding:22px;background:var(--paper);border:1px solid var(--line);border-radius:14px}.card p{font-size:15px}.step-list{list-style:none;padding:0;counter-reset:stage}.step-list>li{counter-increment:stage;position:relative;padding:26px 28px 26px 86px;background:white;border:1px solid var(--line);border-radius:14px;margin:14px 0}.step-list>li:before{content:counter(stage,decimal-leading-zero);position:absolute;left:24px;top:24px;color:var(--accent);font-size:24px;font-weight:800}.result{color:var(--accent);font-weight:650;font-size:15px}
+    .branches{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.branches article{padding:18px;border-left:3px solid var(--accent);background:#edf5f2;font-size:15px}.branches h4{margin:0 0 8px}.notice{padding:22px 26px;border-left:4px solid #be862d;background:#fff5e4;border-radius:0 12px 12px 0}.questions{padding:24px 28px;background:white;border:1px solid var(--line);border-radius:14px}.questions li{padding:8px 0}.table-wrap{overflow-x:auto;background:white;border:1px solid var(--line);border-radius:14px}table{border-collapse:collapse;width:100%;font-size:15px}th,td{text-align:left;vertical-align:top;padding:16px;border-bottom:1px solid var(--line)}thead{background:#e7efeb}tbody th{font-weight:600;width:31%}.files{white-space:nowrap}.files a{display:inline-block;margin-right:12px}footer{margin-top:36px;border-top:1px solid var(--line);padding-top:18px;font-size:14px;color:var(--muted)}
+    @media(max-width:760px){main{padding:20px 16px}header{padding:26px}.cards,.branches{grid-template-columns:1fr}.step-list>li{padding:22px 20px 22px 66px}.step-list>li:before{left:18px}th,td{padding:12px}}
+    @media print{body{background:white;font-size:11pt}main{padding:0;max-width:none}header{background:white;color:var(--ink);padding:0;border-radius:0}header p,.eyebrow{color:var(--muted)}nav{display:none}section{margin-top:22px}.card,.step-list>li,.branches article,tr{break-inside:avoid}.table-wrap{overflow:visible}a{color:var(--ink)}h2,h3{break-after:avoid}}
+    .files{white-space:normal;min-width:175px}.files a{display:block;margin:0 0 8px}
+    .diagram-wrap{overflow-x:auto;background:white;border:1px solid var(--line);border-radius:14px;padding:24px}
+    .mermaid,.mermaid-deferred{margin:0;white-space:pre;font:14px/1.5 monospace}
+    .diagram-wrap svg{display:block;min-width:700px;margin:auto}
+    .scenario-diagram{margin-top:28px}
+    .data-subheading{margin-top:26px}code{overflow-wrap:anywhere}
+    .diagram-overview{margin-top:24px}
+    .diagram-overview summary{cursor:pointer;padding:18px 22px;background:#e7efeb;border-radius:12px;font-weight:650}
+    .diagram-overview[open] summary{margin-bottom:14px}
+    @media print{.diagram-wrap{overflow:visible;padding:8px}.mermaid svg{min-width:0!important;max-width:100%!important}}
+  </style>
+  <script src="assets/mermaid-10.9.3.min.js"></script>
+  <script>
+    // Назначение: отобразить схему процесса после загрузки страницы.
+    // Алгоритм: отобразить первую схему сразу, остальные построить при первом раскрытии.
+    if (window.mermaid) {
+      mermaid.initialize({
+        startOnLoad: true,
+        securityLevel: 'strict',
+        theme: 'neutral',
+        sequence: { useMaxWidth: true, wrap: true, actorMargin: 35, messageMargin: 35 }
+      });
+      document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.diagram-overview').forEach(details => {
+          details.addEventListener('toggle', async () => {
+            const source = details.querySelector('.mermaid-deferred');
+            if (!details.open || !source || source.dataset.processed) return;
+            await mermaid.run({ nodes: [source] });
+          });
+        });
+      });
+    }
+  </script>
+</head>
+<body>
+<main>
+  <nav aria-label="Разделы страницы"><a href="#roles">Участники</a><a href="#diagram">Схема процесса</a><a href="#process">Ход работы</a><a href="#data-flow">Движение информации</a><a href="#documents">Примеры документов</a></nav>
+  <section id="roles">
+    <h2>Кто участвует</h2>
+    <div class="cards">
+      <article class="card"><h3>Клиент</h3><p>Заказывает организацию перевозки. В приложенном примере он же является грузоотправителем.</p></article>
+      <article class="card"><h3>Экспедитор</h3><p>Согласует задание, принимает груз и организует его дальнейшую перевозку.</p></article>
+      <article class="card"><h3>Исполнитель перевозки</h3><p>Сам экспедитор, привлечённый перевозчик либо субэкспедитор, которому передают следующий этап.</p></article>
+      <article class="card"><h3>Грузополучатель</h3><p>Принимает доставленный груз и фиксирует результат приёмки.</p></article>
+    </div>
+  </section>
+  <section id="diagram">
+    <h2>Схема процесса</h2>
+    <p class="muted">Сплошная стрелка — переход к следующему действию, пунктирная — ответ или подтверждение.</p>
+    <details class="diagram-overview" open>
+      <summary>1. Перевозит сам экспедитор</summary>
+      <div class="diagram-wrap"><pre class="mermaid">
+sequenceDiagram
+    accTitle: Перевозит сам экспедитор
+    participant C as Клиент / грузоотправитель
+    participant E as Экспедитор / перевозчик
+    participant R as Грузополучатель
+    C->>E: Поручение на организацию перевозки
+    E-->>C: Согласование услуг и условий
+    Note over C,E: Фактический приём груза экспедитором
+    E-->>C: Экспедиторская расписка
+    Note over E: Решение выполнять перевозку своими силами
+    Note over C,E: Необходимость отдельной заявки уточняется
+    C->>E: Оформление отправления в ЭТрН
+    E-->>C: Подтверждение приёма к перевозке в ЭТрН
+    E->>R: Доставка и передача груза
+    R-->>E: Подтверждение получения в ЭТрН
+    E-->>R: Подтверждение выдачи в ЭТрН
+      </pre></div>
+    </details>
+    <details class="diagram-overview">
+      <summary>2. Привлечён прямой перевозчик</summary>
+      <div class="diagram-wrap"><pre class="mermaid-deferred">
+sequenceDiagram
+    accTitle: Привлечён прямой перевозчик
+    participant C as Клиент / грузоотправитель
+    participant E as Экспедитор
+    participant P as Прямой перевозчик
+    participant R as Грузополучатель
+    C->>E: Поручение на организацию перевозки
+    E-->>C: Согласование услуг и условий
+    Note over C,E: Фактический приём груза экспедитором
+    E-->>C: Экспедиторская расписка
+    Note over E: Выбор прямого перевозчика
+    E->>P: Заказ-заявка, если требуется
+    Note over C,P: В примере заявку готовит экспедитор, подписывает клиент
+    P-->>E: Подтверждение, водитель и автомобиль
+    Note over E,P: Передача груза фактическому перевозчику
+    C->>P: Оформление отправления в ЭТрН
+    P-->>C: Подтверждение приёма к перевозке в ЭТрН
+    P->>R: Доставка и передача груза
+    R-->>P: Подтверждение получения в ЭТрН
+    P-->>R: Подтверждение выдачи в ЭТрН
+      </pre></div>
+    </details>
+    <details class="diagram-overview">
+      <summary>3. Привлечён субэкспедитор</summary>
+      <p class="muted">Субэкспедитор организует или выполняет следующий этап. Документ передачи ему задания и роли при оформлении дальнейшей перевозки требуют уточнения.</p>
+      <div class="diagram-wrap"><pre class="mermaid-deferred">
+sequenceDiagram
+    accTitle: Привлечён субэкспедитор
+    participant C as Клиент
+    participant E as Экспедитор
+    participant S as Субэкспедитор
+    participant R as Грузополучатель
+    C->>E: Поручение на организацию перевозки
+    E-->>C: Согласование услуг и условий
+    Note over C,E: Фактический приём груза экспедитором
+    E-->>C: Экспедиторская расписка
+    Note over E: Выбор субэкспедитора
+    E->>S: Передача следующего этапа перевозки
+    Note over E,S: Документ и порядок передачи уточняются
+    Note over S: Организация или выполнение перевозки
+    Note over E,R: Определяются фактический перевозчик и грузоотправитель
+    Note over E,R: Отправление и приём перевозчиком оформляются в ЭТрН
+    Note over S,R: Фактический перевозчик доставляет и передаёт груз
+    Note over S,R: Грузополучатель подтверждает получение в ЭТрН
+    Note over S,R: Фактический перевозчик подтверждает выдачу в ЭТрН
+      </pre></div>
+    </details>
+    <details class="diagram-overview">
+      <summary>4. Общая схема процесса — раскрыть</summary>
+      <div class="diagram-wrap">
+      <pre class="mermaid-deferred">
+sequenceDiagram
+    accTitle: Сценарий экспедирования груза
+    accDescr: Поручение, приём экспедитором, выбор исполнителя и подтверждение доставки.
+    participant C as Клиент / грузоотправитель
+    participant E as Экспедитор
+    participant P as Перевозчик
+    participant S as Субэкспедитор
+    participant R as Грузополучатель
+    C->>E: Поручение на организацию перевозки
+    E-->>C: Согласование услуг и условий
+    Note over C,E: Фактический приём груза экспедитором
+    E-->>C: Экспедиторская расписка
+    Note over E: Выбор исполнителя перевозки
+    alt Перевозит сам экспедитор
+        Note over E: Выполняет перевозку своими силами
+    else Привлечён прямой перевозчик
+        E->>P: Заказ-заявка, если требуется
+        P-->>E: Подтверждение, водитель и автомобиль
+    else Привлечён субэкспедитор
+        E->>S: Передача следующего этапа
+        Note over E,S: Документ и порядок передачи уточняются
+    end
+    Note over C,R: Далее показан вариант с прямым перевозчиком
+    C->>P: Передача груза, оформление отправления в ЭТрН
+    P-->>C: Подтверждение приёма груза
+    P->>R: Доставка и передача груза
+    R-->>P: Подтверждение получения в ЭТрН
+    P-->>R: Подтверждение выдачи в ЭТрН
+      </pre>
+    </div>
+    </details>
+    <noscript><p>Для отображения схемы включите JavaScript. Описание этапов приведено ниже.</p></noscript>
+  </section>
+  <section id="process">
+    <h2>Предполгаемый сценарий</h2>
+    <ol class="step-list">
+      <li><h3>Клиент поручает организовать перевозку</h3><p>Клиент направляет экспедитору поручение с описанием груза, маршрутом, сроками и условиями. Экспедитор отвечает и согласует услуги.</p><p class="result">Результат: поручение клиента и ответ экспедитора.</p></li>
+      <li><h3>Экспедитор принимает груз</h3><p>После фактического приёма экспедитор фиксирует количество, состояние груза и упаковки, дату и время. Оформляет расписку и передаёт её клиенту.</p><p class="result">Результат: подтверждён приём груза экспедитором.</p></li>
+      <li><h3>Экспедитор выбирает исполнителя</h3><p>Исполнитель определяется при подготовке дальнейшей перевозки. Предусмотрены три варианта:</p>
+        <div class="branches">
+          <article><h4>Своими силами</h4><p>Экспедитор сам выполняет перевозку. Необходимость отдельной заявки нужно согласовать.</p></article>
+          <article><h4>Прямой перевозчик</h4><p>Если нужна отдельная заказ-заявка, её оформляют для выбранного перевозчика. Перевозчик отвечает и сообщает водителя и автомобиль.</p></article>
+          <article><h4>Субэкспедитор</h4><p>Ему передают организацию или выполнение следующего этапа. Документ и порядок такой передачи пока требуют уточнения.</p></article>
+        </div><p class="result">Результат: определён исполнитель и согласованы условия его участия.</p></li>
+      <li><h3>Груз передают перевозчику</h3><p>Грузоотправитель оформляет отправление в электронной транспортной накладной (ЭТрН). Перевозчик подтверждает приём груза к перевозке.</p><p>Приём груза экспедитором и передача перевозчику — два отдельных события, даже если происходят в одном месте.</p><p class="result">Результат: зафиксировано начало фактической перевозки.</p></li>
+      <li><h3>Груз доставляют и выдают</h3><p>Грузополучатель фиксирует фактическое получение груза в ЭТрН. Перевозчик подтверждает выдачу.</p><p class="result">Результат: получение и выдача груза подтверждены участниками.</p></li>
+    </ol>
+  </section>
+  <section id="documents">
+    <h2>Примеры документов для проверки</h2>
+    <p>Приложенный комплект показывает вариант с прямым перевозчиком: офисные столы, 24 места, Москва → Тверь. Клиент и грузоотправитель — Алексей Воронов, экспедитор — Павел Лебедев, перевозчик — ООО «ТверьТранс», получатель — Мария Смирнова.</p>
+    <p class="muted">Это тестовые образцы с вымышленными реквизитами и без действительных электронных подписей. Варианты перевозки своими силами и через субэкспедитора отдельными образцами пока не представлены.</p>
+    <p>XML доступен в двух вариантах: с поясняющими комментариями и без комментариев. Данные в них одинаковы. XSD — схема структуры документа. Ссылки открываются в новой вкладке.</p>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Документ</th><th scope="col">Название и документация Контур Диадок</th><th scope="col">Что фиксирует</th><th scope="col">Открыть файл</th></tr></thead><tbody>
+<tr><th scope="row">Поручение клиента</th><td><a href="https://developer.kontur.ru/doc/diadoc-api/instructions/documents/formal/forwardingorder.html" target="_blank" rel="noopener noreferrer">Поручение экспедитору — титул клиента (Т1) ↗</a></td><td>Клиент передаёт задание экспедитору</td><td class="files"><a href="документы/forwardingorder/ON_POREXPKLT_990000000362_990000000115_0_20261020_550e8400-e29b-41d4-a716-446655440000.xml" target="_blank" rel="noopener noreferrer">XML с комментариями ↗</a> <a href="документы/forwardingorder/forwardingorder-T1.xsd" target="_blank" rel="noopener noreferrer">XSD ↗</a> <a href="без-комментариев/forwardingorder/ON_POREXPKLT_990000000362_990000000115_0_20261020_550e8400-e29b-41d4-a716-446655440000.xml" target="_blank" rel="noopener noreferrer">XML без комментариев ↗</a></td></tr>
+<tr><th scope="row">Ответ экспедитора</th><td><a href="https://developer.kontur.ru/doc/diadoc-api/instructions/documents/formal/forwardingorder.html" target="_blank" rel="noopener noreferrer">Поручение экспедитору — титул экспедитора (Т2) ↗</a></td><td>Экспедитор согласует услуги и условия</td><td class="files"><a href="документы/forwardingorder/ON_POREXPEXP_990000000362_990000000115_0_20261020_2f8a3e44-31fd-4e1e-9c6b-8a0f12d97421.xml" target="_blank" rel="noopener noreferrer">XML с комментариями ↗</a> <a href="документы/forwardingorder/forwardingorder-T2.xsd" target="_blank" rel="noopener noreferrer">XSD ↗</a> <a href="без-комментариев/forwardingorder/ON_POREXPEXP_990000000362_990000000115_0_20261020_2f8a3e44-31fd-4e1e-9c6b-8a0f12d97421.xml" target="_blank" rel="noopener noreferrer">XML без комментариев ↗</a></td></tr>
+<tr><th scope="row">Экспедиторская расписка</th><td><a href="https://developer.kontur.ru/doc/diadoc-api/instructions/documents/formal/forwardingreceipt.html" target="_blank" rel="noopener noreferrer">Экспедиторская расписка — титул экспедитора ↗</a></td><td>Экспедитор подтверждает приём груза</td><td class="files"><a href="документы/forwardingreceipt/ON_EXPRASP_990000000362_990000000115_0_20261021_8f2e4c71-6a93-4b0d-9e25-1c7a5d3f8046.xml" target="_blank" rel="noopener noreferrer">XML с комментариями ↗</a> <a href="документы/forwardingreceipt/forwardingreceipt.xsd" target="_blank" rel="noopener noreferrer">XSD ↗</a> <a href="без-комментариев/forwardingreceipt/ON_EXPRASP_990000000362_990000000115_0_20261021_8f2e4c71-6a93-4b0d-9e25-1c7a5d3f8046.xml" target="_blank" rel="noopener noreferrer">XML без комментариев ↗</a></td></tr>
+<tr><th scope="row">Заказ-заявка перевозчику</th><td><a href="https://developer.kontur.ru/doc/diadoc-api/instructions/documents/formal/orderrequest.html" target="_blank" rel="noopener noreferrer">Заказ-заявка — титул грузоотправителя (Т1) ↗</a></td><td>Подготовка перевозки выбранным исполнителем</td><td class="files"><a href="документы/orderrequest/ON_ZAKZVGO_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_0_20261021_6b742a9b-1c36-4dc9-b89d-c7d082e8b009.xml" target="_blank" rel="noopener noreferrer">XML с комментариями ↗</a> <a href="документы/orderrequest/orderrequest-T1.xsd" target="_blank" rel="noopener noreferrer">XSD ↗</a> <a href="без-комментариев/orderrequest/ON_ZAKZVGO_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_0_20261021_6b742a9b-1c36-4dc9-b89d-c7d082e8b009.xml" target="_blank" rel="noopener noreferrer">XML без комментариев ↗</a></td></tr>
+<tr><th scope="row">Ответ перевозчика</th><td><a href="https://developer.kontur.ru/doc/diadoc-api/instructions/documents/formal/orderrequest.html" target="_blank" rel="noopener noreferrer">Заказ-заявка — титул перевозчика (Т2) ↗</a></td><td>Подтверждение заявки, водитель и автомобиль</td><td class="files"><a href="документы/orderrequest/ON_ZAKZVPER_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_0_20261021_d9b78426-7d55-47bb-8b09-ec4dbe97a52f.xml" target="_blank" rel="noopener noreferrer">XML с комментариями ↗</a> <a href="документы/orderrequest/orderrequest-T2.xsd" target="_blank" rel="noopener noreferrer">XSD ↗</a> <a href="без-комментариев/orderrequest/ON_ZAKZVPER_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_0_20261021_d9b78426-7d55-47bb-8b09-ec4dbe97a52f.xml" target="_blank" rel="noopener noreferrer">XML без комментариев ↗</a></td></tr>
+<tr><th scope="row">Накладная: отправление</th><td><a href="https://developer.kontur.ru/doc/diadoc-api/instructions/documents/formal/waybill.html" target="_blank" rel="noopener noreferrer">ЭТрН — титул грузоотправителя (Т1) ↗</a></td><td>Грузоотправитель оформляет передачу груза</td><td class="files"><a href="документы/waybill/ON_TRNACLGROT_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_2BM-990000000299-000000000-2026102000000000000000000000000_0_20261021_179c3c6b-4a75-477b-9ac6-15e383220019.xml" target="_blank" rel="noopener noreferrer">XML с комментариями ↗</a> <a href="документы/waybill/waybill-reception-T1.xsd" target="_blank" rel="noopener noreferrer">XSD ↗</a> <a href="без-комментариев/waybill/ON_TRNACLGROT_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_2BM-990000000299-000000000-2026102000000000000000000000000_0_20261021_179c3c6b-4a75-477b-9ac6-15e383220019.xml" target="_blank" rel="noopener noreferrer">XML без комментариев ↗</a></td></tr>
+<tr><th scope="row">Накладная: приём перевозчиком</th><td><a href="https://developer.kontur.ru/doc/diadoc-api/instructions/documents/formal/waybill.html" target="_blank" rel="noopener noreferrer">ЭТрН — титул перевозчика о приеме груза (Т2) ↗</a></td><td>Перевозчик подтверждает получение груза</td><td class="files"><a href="документы/waybill/ON_TRNACLPPRIN_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_2BM-990000000299-000000000-2026102000000000000000000000000_0_20261021_250b473d-a4ab-416f-a6de-e6f3f0ab23a7.xml" target="_blank" rel="noopener noreferrer">XML с комментариями ↗</a> <a href="документы/waybill/waybill-reception-T2.xsd" target="_blank" rel="noopener noreferrer">XSD ↗</a> <a href="без-комментариев/waybill/ON_TRNACLPPRIN_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_2BM-990000000299-000000000-2026102000000000000000000000000_0_20261021_250b473d-a4ab-416f-a6de-e6f3f0ab23a7.xml" target="_blank" rel="noopener noreferrer">XML без комментариев ↗</a></td></tr>
+<tr><th scope="row">Накладная: получение</th><td><a href="https://developer.kontur.ru/doc/diadoc-api/instructions/documents/formal/waybill.html" target="_blank" rel="noopener noreferrer">ЭТрН — титул грузополучателя (Т3) ↗</a></td><td>Грузополучатель фиксирует приём груза</td><td class="files"><a href="документы/waybill/ON_TRNACLGRPO_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_2BM-990000000299-000000000-2026102000000000000000000000000_0_20261021_98ea96ac-f2f1-4a7b-8250-55ce45c3c8f1.xml" target="_blank" rel="noopener noreferrer">XML с комментариями ↗</a> <a href="документы/waybill/waybill-delivery-T3.xsd" target="_blank" rel="noopener noreferrer">XSD ↗</a> <a href="без-комментариев/waybill/ON_TRNACLGRPO_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_2BM-990000000299-000000000-2026102000000000000000000000000_0_20261021_98ea96ac-f2f1-4a7b-8250-55ce45c3c8f1.xml" target="_blank" rel="noopener noreferrer">XML без комментариев ↗</a></td></tr>
+<tr><th scope="row">Накладная: выдача</th><td><a href="https://developer.kontur.ru/doc/diadoc-api/instructions/documents/formal/waybill.html" target="_blank" rel="noopener noreferrer">ЭТрН — титул перевозчика о выдаче груза (Т4) ↗</a></td><td>Перевозчик подтверждает выдачу груза</td><td class="files"><a href="документы/waybill/ON_TRNACLPVYN_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_2BM-990000000299-000000000-2026102000000000000000000000000_0_20261021_c719e29f-2873-41b2-964a-72c62d5644ac.xml" target="_blank" rel="noopener noreferrer">XML с комментариями ↗</a> <a href="документы/waybill/waybill-delivery-T4.xsd" target="_blank" rel="noopener noreferrer">XSD ↗</a> <a href="без-комментариев/waybill/ON_TRNACLPVYN_2BM-9900000007-990001001-2026102000000000000000000000000_2BM-990000000115-000000000-2026102000000000000000000000000_2BM-990000000299-000000000-2026102000000000000000000000000_0_20261021_c719e29f-2873-41b2-964a-72c62d5644ac.xml" target="_blank" rel="noopener noreferrer">XML без комментариев ↗</a></td></tr>
+    </tbody></table></div>
+  </section>
+  <section id="data-flow">
+    <h2>Движение информации между документами</h2>
+    <p>Поручение задаёт исходные условия. Следующие документы используют сведения о той же перевозке и добавляют результаты действий участников. Это связь документов по данным, а не автоматическое создание одного XML из другого.</p>
+    <h3>Какие сведения связывают документы</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">Сведения</th><th scope="col">Источник → следующий документ</th><th scope="col">Что проверить в XML</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Клиент, грузоотправитель и экспедитор</th><td>Поручение → ответ экспедитора и расписка</td><td>Согласованность участников и их ролей. Ответ ссылается на исходное поручение, реквизиты сторон сверяются там, где они предусмотрены форматом.</td></tr>
+        <tr><th scope="row">Идентификатор поручения</th><td>Поручение → расписка</td><td><code>УИД_ПорЭксп</code> в расписке совпадает со значением в поручении.</td></tr>
+        <tr><th scope="row">Договор и сопроводительный документ</th><td>Поручение → расписка</td><td>Совпадают вид, номер и дата договора и УПД.</td></tr>
+        <tr><th scope="row">Груз и его характеристики</th><td>Поручение → расписка, заказ-заявка, ЭТрН</td><td>Наименование, количество мест, масса, объём и упаковка относятся к одному грузу. Учитываются единицы измерения, сведения по партии и по всему грузу, а также состав полей каждого документа.</td></tr>
+        <tr><th scope="row">Маршрут, получатель и плановые сроки</th><td>Поручение → заказ-заявка и ЭТрН</td><td>Адреса приёма и назначения, участники и сроки согласованы. Плановые даты не подменяют фактические события.</td></tr>
+        <tr><th scope="row">Приём груза экспедитором</th><td>Фактический приём → расписка</td><td>Добавляются дата и время, состояние груза и упаковки, обязательства экспедитора, номер расписки и стоимость.</td></tr>
+        <tr><th scope="row">Выбранный перевозчик</th><td>Подготовка заказ-заявки → заказ-заявка и ЭТрН</td><td>В обоих документах указан выбранный исполнитель. Единый обязательный идентификатор, связывающий заявку с ЭТрН, в рассматриваемой документации не установлен.</td></tr>
+        <tr><th scope="row">Идентификатор заказ-заявки</th><td>Заказ-заявка Т1 → ответ Т2</td><td>Совпадает <code>УИД_Зак</code>. Ответ дополнительно ссылается на файл исходной заявки.</td></tr>
+        <tr><th scope="row">Водитель и автомобиль</th><td>Ответ перевозчика на заявку → ЭТрН</td><td>Сопоставляются водитель, его удостоверение и регистрационный номер автомобиля. Изменения к моменту погрузки должны быть отражены согласованно.</td></tr>
+        <tr><th scope="row">Идентификатор ЭТрН</th><td>Титулы одной транспортной накладной</td><td>Совпадает <code>УИД_ТрН</code> в тех титулах, где он указан. В приложенном наборе он заполнен в Т2–Т4, в Т1 отсутствует.</td></tr>
+        <tr><th scope="row">Ссылка на предыдущий файл</th><td>ЭТрН Т1 → Т2 → Т3 → Т4</td><td>Т2 ссылается на файл Т1, Т3 — на Т2, Т4 — на Т3. Проверяются идентификаторы файлов и реквизиты ссылок.</td></tr>
+        <tr><th scope="row">События перевозки</th><td>Погрузка, приём и выдача → ЭТрН</td><td>Каждая сторона добавляет сведения о своём событии: время, количество, состояние груза и подтверждение действия.</td></tr>
+      </tbody>
+    </table></div>
+    <h3 class="data-subheading">Что появляется на каждом этапе</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">Этап</th><th scope="col">Уже известные сведения</th><th scope="col">Новая информация</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Поручение клиента</th><td>Участники, груз, маршрут и плановые условия.</td><td>Оформленное задание на услуги экспедитора.</td></tr>
+        <tr><th scope="row">Ответ экспедитора</th><td>Исходное поручение.</td><td>Согласование услуг и условий, ссылка на поручение.</td></tr>
+        <tr><th scope="row">Экспедиторская расписка</th><td>Поручение, участники, договор и груз.</td><td>Факт приёма экспедитором, состояние груза, время и действительная стоимость.</td></tr>
+        <tr><th scope="row">Заказ-заявка</th><td>Груз, маршрут и требования к перевозке.</td><td>Выбранный перевозчик, условия заказа и идентификатор заявки.</td></tr>
+        <tr><th scope="row">Ответ на заказ-заявку</th><td>Полученная заявка.</td><td>Решение перевозчика, водитель и транспорт.</td></tr>
+        <tr><th scope="row">ЭТрН: отправление и приём</th><td>Стороны, груз, маршрут, водитель и автомобиль.</td><td>Оформление отправления грузоотправителем и подтверждение приёма перевозчиком.</td></tr>
+        <tr><th scope="row">ЭТрН: получение и выдача</th><td>Сведения о начатой перевозке.</td><td>Фактическое получение грузополучателем и подтверждение выдачи перевозчиком.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted">Ориентиры для проверки примеров: офисные столы, 24 места, нетто 840 кг, брутто 888 кг, объём 2,4 м³. Маршрут: Москва, Павелецкая площадь, 2с2 → Тверь, Советская, 15. Сведения проверяются в тех документах, где соответствующие поля заполнены.</p>
+  </section>
+  <footer>Основа: «Сценарий экспедирования груза». Статус: проект для согласования, соответствие реальному процессу заказчика ещё не подтверждено. Для передачи комплекта сохраняйте страницу и папку «документы» вместе.</footer>
+</main>
+</body>
+</html>
